@@ -14,8 +14,6 @@ The fix is old and boring: **write the spec first, agree on it, plan the work, w
 
 So I built **Specforge**, a Claude Code plugin for spec-driven development with human approval gates. This post covers what it does, how the gates work, how I built it test-first, and a complete setup and usage guide you can follow today.
 
-> **Repository:** `<your-repo-url>` (replace with your GitHub link before publishing)
-> **License:** MIT. **Version:** 0.1.0.
 
 ---
 
