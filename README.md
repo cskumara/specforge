@@ -8,21 +8,85 @@ You describe a feature. Claude writes a spec with numbered acceptance criteria, 
 
 Requirements: Claude Code 2.1.295 or later, `python3` and `git` on your PATH, and `gh` if you want `/specforge:review` to open pull requests.
 
-From inside Claude Code, add this repository as a marketplace and install the plugin:
+Do the steps in order. Enter slash commands one at a time: type one, press Enter, then type the next. Pasting several together fails. Keep the path on a single line, because a path that wraps across lines is read wrongly.
 
-```
-/plugin marketplace add ./specforge
-/plugin install specforge@specforge-marketplace
-```
+1. **Add the marketplace.** Use the absolute path of your clone of this repository (for example `/Users/you/code/specforge`).
 
-Use the path to your clone in place of `./specforge`. From a shell, the equivalents are:
+    Inside Claude Code:
 
-```
-claude plugin marketplace add ./specforge
-claude plugin install specforge@specforge-marketplace
-```
+    ```
+    /plugin marketplace add /absolute/path/to/specforge
+    ```
 
-Run `/reload-plugins` or restart the session after installing. Then open the project you want to build in and run `/specforge:spec`.
+    Or from a shell:
+
+    ```
+    claude plugin marketplace add /absolute/path/to/specforge
+    ```
+
+2. **Install the plugin.** In a separate command:
+
+    ```
+    /plugin install specforge@specforge-marketplace
+    ```
+
+    Or from a shell:
+
+    ```
+    claude plugin install specforge@specforge-marketplace
+    ```
+
+3. **Check that it is installed.** From a shell, `claude plugin list` should show `specforge@specforge-marketplace` with `Status: enabled`.
+
+4. **Reload.** In a session that was already open, run `/reload-plugins` (or restart Claude Code). Type `/specforge:` and you should see the six commands: `spec`, `plan`, `build`, `review`, `status` and `approve`.
+
+To uninstall, run `claude plugin marketplace remove specforge-marketplace` in a shell. Because the marketplace is a local folder, edits you make to the plugin take effect on the next `/reload-plugins`.
+
+## Usage step by step
+
+Do steps 1 and 2 once per project. From step 3 on, this is the loop for every feature.
+
+1. **Prepare a project.** Any folder under git works. For a Python example:
+
+    ```
+    mkdir my-project && cd my-project
+    git init -b main
+    python3 -m venv .venv && .venv/bin/pip install pytest
+    printf '.venv/\n__pycache__/\n.pytest_cache/\n' > .gitignore
+    git add -A && git commit -m "chore: init"
+    ```
+
+2. **Tell specforge how to run your tests.** Create `.spec/config.json`:
+
+    ```json
+    { "test_command": ".venv/bin/pytest -q" }
+    ```
+
+    You can skip this if `pytest`, `npm test` or `flutter test` already works from the project root. Specforge finds those on its own. If it cannot find a runner, commits are blocked with a message telling you to set `test_command`.
+
+3. **Start Claude Code in the project folder** with `claude`, then run `/specforge:status`. Expect it to say there is no workflow yet.
+
+4. **Describe the feature.** Run `/specforge:spec <what you want to build>`, for example `/specforge:spec REST API for todos: create, list, complete, delete. In memory, no auth.` Answer up to 5 questions. Expect `.spec/requirement.md`, `.spec/spec.md` with numbered criteria (AC-1, AC-2, ...) and a root `CLAUDE.md`, a `spec-reviewer` verdict, and then a stop. Claude does not start planning.
+
+5. **Review `.spec/spec.md`.** Edit it or ask Claude to change it. Changes before approval cost nothing.
+
+6. **Approve the spec.** Run `/specforge:approve spec`. Expect `spec_approved` to become true in `.spec/state.json`. Until you do this, `/specforge:plan` refuses and edits to code folders and test folders are blocked.
+
+7. **Plan.** Run `/specforge:plan`. Expect `.spec/plan.md` with tasks tagged by AC-ID, folders each with a short `CLAUDE.md`, and failing tests written from the acceptance criteria only. Source folders are still blocked at this point. Claude stops again.
+
+8. **Review the plan and the tests**, then run `/specforge:approve plan`. Now the source folders are open and `/specforge:build` can run.
+
+9. **Build.** Run `/specforge:build`, or choose how often it pauses with `/specforge:build --mode strict` (every task), `--mode checkpoint` (every milestone, the default) or `--mode auto` (only risky actions). Expect a `feature/...` branch and, per task, a `test:` commit, a `feat:` commit and, if needed, a `refactor:` commit. Answer its approval questions when it pauses. If the same test fails 3 times, it stops and reports.
+
+10. **Know what gets blocked.** While the suite fails, any commit that is not a `test:` commit is blocked and Claude is shown the test output. Direct edits to `.spec/state.json` are always blocked. Claude will read the reason and fix the problem, so you rarely have to step in.
+
+11. **Check progress at any time** with `/specforge:status`. It shows the phase, approvals, spec version and what is pending.
+
+12. **Review.** When the build is done, run `/specforge:review`. Expect a fresh `code-reviewer` pass and `.spec/review.md` mapping every AC to its code, its test and a status, plus gaps and the full test output. Then it pushes the branch and opens a pull request. That needs a git remote and `gh`; without them Claude gives you the commands instead. It never merges.
+
+13. **Merge the pull request yourself** if you are happy with it.
+
+If you change `.spec/spec.md` after approving it, the spec version goes up and both approvals reset. Review the change, run `/specforge:approve spec` again, and re-run `/specforge:plan` if the plan needs to change. To start over completely, delete the `.spec` folder.
 
 ## Workflow
 
@@ -140,6 +204,16 @@ Pending: no tasks left. Next: /specforge:review.
 Claude: review.md written: AC-1..AC-6 all pass, no gaps.
         PR opened: https://github.com/you/todo-api/pull/1 (not merged).
 ```
+
+## Troubleshooting
+
+- **The `/specforge:` commands do not appear.** Run `/reload-plugins`, then open `/plugin` and check the Errors tab for a load error. From a shell, `claude plugin list` should show the plugin as enabled, and `claude plugin validate /absolute/path/to/specforge` should pass.
+- **`/plugin marketplace add` fails.** Enter it on its own line with the whole path on one line, and use an absolute path. Pasting several commands at once, or a path that wrapped, is the usual cause.
+- **Nothing is ever blocked.** Specforge only acts in projects that have a `.spec/` folder, which `/specforge:spec` creates. Also check that `python3` is on your PATH, because every hook runs through it, and that you reloaded or restarted after installing.
+- **Everything is blocked, with "state.json is corrupt" or "missing".** Run `/specforge:status` to see the error. If `.spec/state.json` was damaged, delete the `.spec` folder and start again with `/specforge:spec`.
+- **Commits are blocked with "test runner not found" or "no test command found".** Set `test_command` in `.spec/config.json` (see Configuration), and make sure the runner is installed in the environment Claude runs commands in.
+- **A commit is blocked and you meant to commit failing tests.** Start the commit message with `test:`.
+- **`/specforge:plan` or `/specforge:build` refuses.** It is telling you which approval is missing. Review the file it names and run the `/specforge:approve` command it gives.
 
 ## Limitations
 
