@@ -489,7 +489,6 @@ The core idea is simple: **move the rules out of the prompt and into the tooling
 
 If you try Specforge, I would like to hear where the gates helped and where they got in your way. The most useful bug reports include the exact message you saw and the step you were on.
 
-*If this was useful, a clap or a follow helps other developers find it.*
 
 ---
 
