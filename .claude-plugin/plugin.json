@@ -2,7 +2,7 @@
   "name": "specforge",
   "version": "0.1.0",
   "description": "Spec-driven development with human approval gates: spec, plan, build, review.",
-  "author": { "name": "Gunanithi CS" },
+  "author": { "name": "Kumaran C S" },
   "license": "MIT",
   "keywords": ["spec-driven", "tdd", "approval-gates", "workflow"]
 }

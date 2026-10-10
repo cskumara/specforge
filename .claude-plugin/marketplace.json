@@ -1,7 +1,7 @@
 {
   "name": "specforge-marketplace",
   "description": "Marketplace for the specforge plugin",
-  "owner": { "name": "Gunanithi CS" },
+  "owner": { "name": "Kumaran C S" },
   "plugins": [
     {
       "name": "specforge",
