@@ -1,0 +1,36 @@
+---
+description: Turn the approved spec into plan.md, a folder structure with short CLAUDE.md files, and failing tests, then stop for your approval.
+---
+
+# /specforge:plan
+
+You are starting the **plan** phase. Work from the project root.
+
+## Gate: refuse if the spec is not approved
+
+Run `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/state.py" get` first.
+
+- If there is no state, refuse. Tell the user to run `/specforge:spec` first.
+- If the state is corrupt, refuse and report the error. Do not repair it.
+- If `spec_approved` is `false`, refuse. Tell the user: "The spec is not approved. Review `.spec/spec.md`, then run `/specforge:approve spec`." Do nothing else.
+- If `plan_approved` is already `true`, ask the user before replacing `.spec/plan.md`.
+
+## Steps
+
+1. Run `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/state.py" set-phase plan`.
+
+2. Read `.spec/spec.md` and `.spec/requirement.md`. Note the `spec_version` from the state.
+
+3. Load the `spec-writing` skill and write `.spec/plan.md` from `${CLAUDE_PLUGIN_ROOT}/skills/spec-writing/templates/plan.md`:
+   - Milestones, each a demonstrable slice.
+   - Small tasks, each tagged with the AC-IDs it satisfies, for example `T1 (M1, AC-1)`. Every AC must be covered by at least one task.
+   - A folder structure.
+   - The traceability table from each AC to its tasks and test file.
+
+4. Create the planned folders. In each source or test folder, add a short `CLAUDE.md` from `${CLAUDE_PLUGIN_ROOT}/skills/spec-writing/templates/folder-CLAUDE.md`. Each one is at most 10 lines.
+
+5. Run the `specforge:test-writer` subagent. Give it **only** the acceptance criteria from `.spec/spec.md` and the test folder layout. It must not see implementation ideas. It writes failing tests, one or more per AC, and names each test after its AC-ID.
+
+6. Run the tests and confirm they fail for the right reason (the feature is missing), not because of a syntax error or a broken import. Fix the tests if they fail for the wrong reason. Do not commit in this phase.
+
+7. **Stop.** Summarize the milestones, the task count, and which tests were created and are failing. Tell the user to review `.spec/plan.md` and the tests, then run `/specforge:approve plan`, then `/specforge:build`. Do not approve anything yourself and do not write any production code.

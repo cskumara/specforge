@@ -1,0 +1,34 @@
+---
+description: Review the finished build with a fresh code-reviewer, write review.md mapping every AC to its code and test, then open a pull request. Never merges.
+---
+
+# /specforge:review
+
+You are starting the **review** phase. Work from the project root.
+
+## Gate
+
+Run `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/state.py" get`. If there is no state, the state is corrupt, or `spec_approved` and `plan_approved` are not both `true`, refuse and say what is missing. Then run `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/state.py" set-phase review`.
+
+## Steps
+
+1. Run the **full test** suite (use `test_command` from `.spec/config.json` if set, otherwise the project's usual runner). Keep the complete output.
+
+2. Run a fresh `specforge:code-reviewer` subagent. It must not inherit your build context. Give it `.spec/spec.md`, `.spec/plan.md`, and the diff of the feature branch against its base branch. It reports, per acceptance criterion, the implementing code, the covering test, and any problems.
+
+3. Check the git history for red before green. Run `git log --reverse --format=%s` on the feature branch. For each task, a `test:` commit must appear before the `feat:` commit that implements it. List every violation under Gaps.
+
+4. Write `.spec/review.md` from `${CLAUDE_PLUGIN_ROOT}/skills/spec-writing/templates/review.md`:
+   - Cover every AC from `.spec/spec.md` in the coverage table, with the code location (`file:line`), the test (`file::name`) and a status of pass, fail or missing.
+   - Gaps found: missing or weak tests, uncovered edge cases, red-before-green violations, code outside the spec, and the reviewer's findings. Write "None" only if there really are none.
+   - Test results: the full output from step 1.
+
+5. Commit `.spec/review.md` with a `docs:` prefix. Then open the pull request: `git push -u origin <branch>` followed by `gh pr create`. Use the review summary as the body. If any AC is failing or missing, or the suite fails, add `--draft`. If `gh` is not available or there is no remote, say so and give the user the commands to run.
+
+6. Report to the user: the PR link, a table of ACs with their status, and the gaps.
+
+## Rules
+
+- Never merge. Do not run `gh pr merge` or `git merge`, and do not enable auto-merge. Merging is the user's decision.
+- Do not fix code in this phase. Report gaps and let the user decide whether to go back to `/specforge:build`.
+- Never edit .spec/state.json.
