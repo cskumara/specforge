@@ -63,3 +63,56 @@ def test_limitations_are_honest_about_what_hooks_cannot_enforce(readme):
     low = section(readme, "limitations").lower()
     assert "red" in low and "green" in low  # TDD order is not mechanically enforced
     assert "bash" in low  # shell writes to state.json are best effort
+
+
+# ---------- step-by-step install and usage ----------
+
+def test_install_explains_one_command_per_line(readme):
+    low = section(readme, "install").lower()
+    assert "one at a time" in low or "one per line" in low
+
+
+def test_install_gives_shell_commands_and_verification(readme, plugin_json, marketplace_json):
+    install = section(readme, "install")
+    assert "claude plugin marketplace add" in install
+    assert f"claude plugin install {plugin_json['name']}@{marketplace_json['name']}" in install
+    assert "claude plugin list" in install
+    assert "/reload-plugins" in install
+
+
+def test_install_has_numbered_steps(readme):
+    install = section(readme, "install")
+    numbered = [l for l in install.splitlines() if l[:3] in ("1. ", "2. ", "3. ", "4. ")]
+    assert len(numbered) >= 4
+
+
+def test_usage_section_exists_and_precedes_workflow(readme):
+    h = headings(readme)
+    assert "usage step by step" in h
+    assert h.index("usage step by step") < h.index("workflow")
+
+
+def test_usage_prepares_a_project_first(readme):
+    usage = section(readme, "usage step by step")
+    for needle in ("git init", ".spec/config.json", "test_command"):
+        assert needle in usage, needle
+
+
+def test_usage_is_a_numbered_walkthrough_of_every_command(readme):
+    usage = section(readme, "usage step by step")
+    numbered = [l for l in usage.splitlines() if l.split(". ")[0].isdigit()]
+    assert len(numbered) >= 10
+    for name in COMMANDS:
+        assert f"/specforge:{name}" in usage
+
+
+def test_usage_tells_the_user_what_to_check_at_each_gate(readme):
+    low = section(readme, "usage step by step").lower()
+    assert "blocked" in low and "expect" in low
+
+
+def test_troubleshooting_section(readme):
+    assert "troubleshooting" in headings(readme)
+    low = section(readme, "troubleshooting").lower()
+    for needle in ("/plugin", "errors", "claude plugin validate", "/reload-plugins", "python3"):
+        assert needle in low, needle
