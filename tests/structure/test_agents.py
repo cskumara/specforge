@@ -53,7 +53,8 @@ def test_every_agent_a_command_launches_exists(root):
     for path in (root / "commands").glob("*.md"):
         referenced |= set(re.findall(r"(?<!/)specforge:([a-z][a-z-]*)", path.read_text()))
     assert referenced, "commands should launch agents"
-    assert referenced <= set(AGENTS), referenced - set(AGENTS)
+    on_disk = {p.stem for p in (root / "agents").glob("*.md")}
+    assert referenced <= on_disk, referenced - on_disk
 
 
 # ---------- reviewers are read-only ----------
