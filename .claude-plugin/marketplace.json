@@ -1,0 +1,12 @@
+{
+  "name": "specforge-marketplace",
+  "description": "Marketplace for the specforge plugin",
+  "owner": { "name": "Gunanithi CS" },
+  "plugins": [
+    {
+      "name": "specforge",
+      "source": "./",
+      "description": "Spec-driven development with human approval gates: spec, plan, build, review."
+    }
+  ]
+}
